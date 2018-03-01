@@ -6,8 +6,14 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HermitLib", "HermitLib\HermitLib.csproj", "{38EB6C9E-03B9-4102-BA57-79135ED332D3}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HermitClient", "HermitClient\HermitClient.csproj", "{E95D1CD4-9A2A-4FFF-9D69-718F5A71F014}"
+	ProjectSection(ProjectDependencies) = postProject
+		{38EB6C9E-03B9-4102-BA57-79135ED332D3} = {38EB6C9E-03B9-4102-BA57-79135ED332D3}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HermitServer", "HermitServer\HermitServer.csproj", "{C7DC207E-EF9B-4DA0-8A81-AE56CE11B023}"
+	ProjectSection(ProjectDependencies) = postProject
+		{38EB6C9E-03B9-4102-BA57-79135ED332D3} = {38EB6C9E-03B9-4102-BA57-79135ED332D3}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

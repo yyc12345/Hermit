@@ -2,7 +2,7 @@
 
 namespace HermitClient
 {
-    public class Class1
+    public class ClientCore
     {
     }
 }
