@@ -375,7 +375,8 @@ Teji Protocol支持以下类型的非对称加密
 * ~~mcEliece~~
 * ~~ntru~~
 
-Teji Protocol支持的对称加密和支持的扩展技术如下
+Teji Protocol支持的对称加密和支持的扩展技术如下  
+
 |加密类型|支持rotor\(T/F\)|支持package\(T/F\)|支持AEAD\(T/F\)|
 |:---:|:---:|:---:|:---:|
 |raw|T|T|T|
