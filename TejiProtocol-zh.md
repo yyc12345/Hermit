@@ -30,7 +30,6 @@ Protocol Version: 0.1
     * 支持的加密方式以及其支持的扩展技术
     * 指令列表
         * ban, kick
-        * kick
         * room
         * user
         * ls
