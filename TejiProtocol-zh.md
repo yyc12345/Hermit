@@ -2,10 +2,14 @@
 本文档主要介绍被用于Hermit的Teji Protocol  
 Teji Protocol包含2层，类IRC层和安全层。每一个层在协议中都尽量保持了分离，偶尔有耦合较严重的部分  
 全文将按一个正常连接的时间顺序进行讲解  
-Protocol Version: 0.1
+Protocol Version: 1.0 alpha
 
 **目录：**  
 * 握手
+    * 握手1
+    * 握手2
+    * 握手3
+    * 握手4
 * 数据传输
     * 安全层
         * 基本格式
@@ -16,6 +20,7 @@ Protocol Version: 0.1
         * DATA\_TYPE
             * HEART, SHUTDOWN
             * WORD, COMMAND, RESPONSE, BROADCAST
+            * REQUEST
             * FILE\_HEAD
             * FILE\_BODY
 * 断连
@@ -216,6 +221,7 @@ Protocol Version: 0.1
 |心跳包|HEART|
 |注销|SHUTDOWN|
 |文本|WORD|
+|文件推送请求|RRQUEST|
 |文件头|FILE\_HEAD|
 |文件主体|FILE\_BODY|
 |命令|COMMAND|
@@ -239,15 +245,27 @@ ACTUAL\_DATA不需要填写，或可以填写随机数据
 >COMMAND总是由Client->Server  
 >RESPONSE的内容格式参阅杂项说明  
 
+##### REQUEST
+REQUEST用于传输文件之前协商传输事宜  
+
+|标识符|简要|大小/数据格式|
+|:---:|:---:|:---:|
+|STATUS|状态|Int32|
+|UNIQUE\_CODE|唯一标识符|byte\[256\]|
+
+* STATUS指定该请求的类别，以下值是合法的：0（请求下载文件），1（请求上传文件），2（接受），3（拒绝），指定意外的值将会默认为忽略或拒绝
+
 ##### FILE\_HEAD
-FILE\_HEAD是文件传输的起始，在传输文件之前需要通过此格式来协商传输事宜  
+FILE\_HEAD是文件传输的起始  
 
 |标识符|简要|大小/数据格式|
 |:---:|:---:|:---:|
 |SECTION\_COUNT|数据分片个数|Int32|
+|WORKSPACE|位置|Int32|
 |UNIQUE\_CODE|唯一标识符|byte\[256\]|
 
-* SECTION\_COUNT表明文件被分为了多少片段，即将来接收的FILE消息的个数，表达此意思时数值必须大于等于1。**此外该值也负责指示一个决策：接受或拒绝**，即一方发送文件，另一方表达一个决策，接受还是拒绝。回复接受后才开始数据传输。表示接受此值设为0，表示拒绝此值设为-1  
+* SECTION\_COUNT表明文件被分为了多少片段，即将来接收的FILE消息的个数，表达此意思时数值必须大于等于1  
+* WORKSPACE表明该数据属于哪一个位置，有效值为：0（临时文件），1（头像），2（表情），如果指定意外的值，将会默认为临时文件  
 * UNIQUE\_CODE为对要发送文件取SHA256的结果，在后文的传输该文件的片段的时候，或者请求该文件的时候需要使用此数据  
 
 ##### FILE\_BODY
@@ -294,17 +312,19 @@ SaltHash2 = SHA256(SaltHash1 + uid + salt2)
 这也就意味着服务器对于一个用户的存储需要以下字段：UID, Salt1, Salt2, SaltHash2  
 
 ### 文件传输过程概述
-先由发送者向接收者发送FILE\_HEAD包，等待对方回应，如果拒绝，则取消发送，如果接受，就发送一系列FILE\_BODY包，接收者接收  
+先由发送者向接收者发送REQUEST包，等待对方回应，如果拒绝，则取消发送，如果接受，就先发送FILE\_HEAD包，然后发送一系列FILE\_BODY包，接收者接收  
 如果是用户向服务器提交文件，则需要额外的操作是自动生成一条来自发送文件的人的WORD消息，并发送到指定的Room，消息至少要提供这个文件的UNIQUE\_CODE。其余用户就这样得到文件已上传的消息，其余用户可以使用/pull UNIQUE\_CODE下载文件  
 
->表情的机制实质上是通过文件机制间接实现的，通过/pull对应的表情的UNIQUE\_CODE来下载表情，然后将一段文本中的某些字符替换为表情（参考Discord的表情机制）  
+>表情的机制实质上是通过文件机制间接实现的，通过/pull对应的表情的UNIQUE\_CODE来下载表情，然后将一段文本中的某些字符替换为表情（参考Discord的表情机制） 
+>成员头像由文件机制实现，由一段GUID指向一个图片文件，根据客户端是否需要显示头像而自行/pull   
 >拒绝接受通常发生在接收方的本地存储中有与待接收文件相同UNIQUE\_CODE的文件  
->当用户/pull了一个无效的UNIQUE\_CODE后，Server会通过RESPONSE表明这一情况，如果UNIQUE\_CODE有效，Server会直接向这个用户发送FILE\_HEAD等待确认接收  
+>当用户/pull了一个无效的UNIQUE\_CODE后，Server会通过RESPONSE表明这一情况，如果UNIQUE\_CODE有效，Server会直接向这个用户发送REQUEST等待确认接收  
+>文件分三个存储区，临时文件，头像，表情。三个存储区是分离的，且不能互相引用。这意味着如果你上传某张照片到头像区作为头像后，需要在上传一遍到表情区才能使你的照片既作为头像又作为表情来使用。
 
 ### 唯一标识符与Room机制
 Teji Protocol采用GUID作为唯一标识，为方便使用会增加一些附属数值，这些数值仅仅用于展示给用户，真正传输的时候是传输GUID  
 Teji Protocol采用Room制进行对话，无论是群组对话还是两个人的私聊，都会创建Room来实现  
-一些显示给用户的名称（例如Room name / Nickname之类的）中不得包含一些字符，因为这些字符会被程序所引用，使用会导致一些不可逆的错误。不得包含的字符有  / \\ : " \* ? < \> \| \# -
+一些名称（例如Room name / Nickname之类的）中不得包含一些字符，因为这些字符会被程序所引用，使用会导致一些不可逆的错误。不得包含的字符有  / \\ : " \* ? < \> \| \# -
 
 ### 加密方式json格式
 下方将展示一个加密方式json的实例，我们通过实例来分析其写法
@@ -427,9 +447,13 @@ Teji Protocol中使用指令来让用户操控服务器设置，用户有不同�
 /user add NAME PASSWORD
 /user del NAME
 [limited]/user change NAME NEW_PASSWORD
+[limited]/user nickname NAME NEW_NICKNAME
+[limited]/user avatar NAME AVATAR_GUID
 ```
 
 * change用于改变用户的密码，由用户本人操作或admin操作才是合法的
+* nickname用于修改昵称，只有用户本人或admin操作才是合法的
+* avatar用于更改头像，只有用户本人或admin操作才是合法的。AVATAR_GUID可以为空
 
 #### ls
 
@@ -447,7 +471,8 @@ Teji Protocol中使用指令来让用户操控服务器设置，用户有不同�
 * client会列出当前所有连接到服务器的client
 * room列出当前用户可以访问的room，指定all列出所有room
 
-ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各类json格式  
+ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各类json在服务端的格式，传输到客户端的数据会做部分舍去，具体舍去内容会在下方表明  
+服务端所用json格式指示列出了必须要有的字段，而实际上在服务端存储某一类别数据的时候可能不会将其作为json保存，而是用Mysql之类的大型数据库存储。并且有些数据是不需要存储的（例如client列表）  
 
 ##### ban json
 
@@ -463,6 +488,8 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
     }
 ]
 ```
+
+>客户端与服务端数据统一
 
 ##### client json
 
@@ -486,6 +513,8 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
 ]
 ```
 
+>客户端与服务端数据统一
+
 ##### room json
 
 ```json
@@ -493,6 +522,8 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
     {
         "name": "general",
         "type": "public",
+        "password": "",
+        "host": "bl",
         "users": [
             "bl",
             "yyc"
@@ -501,6 +532,8 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
     {
         "name": "dev",
         "type": "password",
+        "password": "teji",
+        "host": "jx",
         "users": [
             "chris",
             "jx"
@@ -509,6 +542,8 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
     {
         "name": "nsfw-driverschool",
         "type": "private",
+        "password": "",
+        "host": "61",
         "users": [
             "61",
             "oing"
@@ -516,6 +551,8 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
     }
 ]
 ```
+
+>客户端舍去password字段
 
 ##### user json
 
@@ -525,6 +562,7 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
         "name": "bl",
         "nickname": "blblb",
         "isAdmin": true,
+        "avatarGuid": "3c13bf732ab3f110012727479473bf732ab3f1100132ab3f24794732ab3f23c1",
         
         "salt1": "c13bf732ab3f1274794732ab3f23100127411001794732ab3f23c13bf732ab3f",
         "salt2": "13bf732ab3f1100794732ab327423cf127473f1100194732ab3f23c13bf732ab",
@@ -533,15 +571,20 @@ ls指令会使用RESPONSE消息，用json序列返回结果，下面列出了各
 ]
 ```
 
+>客户端舍去salt1, salt2, saltHash字段
+
 #### 杂项指令
 
 ```
 /pull UNIQUE_CODE
+[admin]/wipe
+[admin]/admin NAME
 [admin]/broadcast WORDS
 [admin]/shutdown [TIMEOUT]
 ```
 
 * pull可以拉取对应的资源到本地，需要提供对应的资源编号
+* wipe负责擦除数据，wipe只会擦除临时文件中的数据和所有历史记录，对于表情和头像中的数据仍然保留，执行此指令会使服务器立即重启，且需要在清理完成后才允许再次连接服务器  
+* admin赋予指定人管理员权限，再执行一遍即可撤销管理员权限
 * broadcast向所有加入服务器的人广播一条消息
 * shutdown用于强制关闭服务器，可以指定以毫秒为单位的超时
-
