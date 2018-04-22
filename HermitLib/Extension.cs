@@ -165,6 +165,10 @@ namespace HermitLib {
             return this;
         }
 
+        public string Path() {
+            return this.Path(Information.OS);
+        }
+
         /// <summary>
         /// get the path without slash
         /// </summary>

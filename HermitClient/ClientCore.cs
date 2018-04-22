@@ -1,8 +1,9 @@
 ﻿using System;
 
-namespace HermitClient
-{
-    public class ClientCore
-    {
+namespace HermitClient {
+    public class ClientCore {
+
+
+
     }
 }

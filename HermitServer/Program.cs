@@ -10,7 +10,14 @@ namespace HermitServer {
 
             //initialize
             //todo:init
-
+            ConsoleAssistance.WriteLine("[Main] Initializing server config...");
+            General.serverConfig = new ServerConfig(Information.WorkPath.Enter("config.json").Path());
+            ConsoleAssistance.WriteLine("[Main] Initializing server database...");
+            General.serverDatabase = new ServerDatabase();
+            ConsoleAssistance.WriteLine("[Main] Initializing server socket...");
+            General.serverSocket = new ServerSocket();
+            ConsoleAssistance.WriteLine("[Main] Start listening...");
+            General.serverSocket.StartListen();
 
             //circle
             while (true) {
