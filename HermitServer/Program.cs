@@ -24,7 +24,7 @@ namespace HermitServer {
                 var result = Console.ReadKey(true);
                 string command = "";
                 if (result.Key == ConsoleKey.Tab) {
-                    ConsoleAssistance.WriteLine("Hermit>", ConsoleColor.Yellow);
+                    ConsoleAssistance.WriteLine("Hermit-server>", ConsoleColor.Yellow);
                     command = Console.ReadLine();
                     //todo:process command
                 }
