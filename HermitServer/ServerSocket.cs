@@ -55,6 +55,7 @@ namespace HermitServer {
             Socket s = (Socket)ar.AsyncState;
             var client = s.EndAccept(ar);
             var cache = new ServerSocketItem(client, System.Guid.NewGuid().ToString());
+            cache.StatusChanged += client_StatusChanged;
             ConsoleAssistance.WriteLine($"[Socket] Accept {cache.EndPoint}'s connection and its Guid is {cache.Guid}.");
             ConsoleAssistance.WriteLine($"[Socket] {cache.Guid} starts to handshake...");
 
@@ -64,15 +65,45 @@ namespace HermitServer {
             s.BeginAccept(new AsyncCallback(AcceptCallback), s);
         }
 
+
+
+
+
         #endregion
 
         #region client
+
+        object lock_clientList = new Object();
 
         Dictionary<string, ServerSocketItem> handshakeList;
         Dictionary<string, ServerSocketItem> normalList;
         List<ServerSocketItem> rtrList;
 
+        private void client_StatusChanged(ServerSocketBelongTo arg1, ServerSocketBelongTo arg2, ServerSocketItem arg3) {
+            if(arg1==ServerSocketBelongTo.Handshake && arg2 == ServerSocketBelongTo.Normal) {
+                handshakeList.Remove(arg3.Guid);
+                normalList.Add(arg3.UserName, arg3);
+                return;
+            }
+            if (arg1 == ServerSocketBelongTo.Handshake && arg2 == ServerSocketBelongTo.RTR) {
+                handshakeList.Remove(arg3.Guid);
+                rtrList.Add(arg3);
+                return;
+            }
+            if (arg1 == ServerSocketBelongTo.Normal && arg2 == ServerSocketBelongTo.RTR) {
+                normalList.Remove(arg3.UserName);
+                rtrList.Add(arg3);
+                return;
+            }
+            if (arg1 == ServerSocketBelongTo.Normal && arg2 == ServerSocketBelongTo.Close) {
+                normalList.Remove(arg3.UserName);
+                return;
+            }
 
+            throw new ArgumentException();
+        }
+
+        
 
         #endregion
 
