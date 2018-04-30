@@ -42,7 +42,8 @@ namespace HermitServer {
                 banDatabasePath = Information.WorkPath.Enter("ban.db").Path(),
                 emotionDatabasePath = Information.WorkPath.Enter("emotion.db").Path(),
                 ipv4Port = "8686",
-                ipv6Port = "6161"
+                ipv6Port = "6161",
+                maxUser = "10"
             };
 
             var file = new StreamWriter(file_path, false, Information.UniversalEncoding);
@@ -73,6 +74,8 @@ namespace HermitServer {
                         return config.ipv4Port;
                     case "ipv6Port":
                         return config.ipv6Port;
+                    case "maxUser":
+                        return config.maxUser;
                     default:
                         return "";
                 }
@@ -101,6 +104,9 @@ namespace HermitServer {
                     case "ipv6Port":
                         config.ipv6Port = value;
                         break;
+                    case "maxUser":
+                        config.maxUser = value;
+                        break;
                     default:
                         break;
                 }
@@ -120,6 +126,8 @@ namespace HermitServer {
 
         public string ipv4Port { get; set; }
         public string ipv6Port { get; set; }
+
+        public string maxUser { get; set; }
     }
 
 }

@@ -4,6 +4,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using HermitLib;
+using System.Threading;
 
 namespace HermitServer {
 
@@ -13,6 +14,11 @@ namespace HermitServer {
             handshakeList = new Dictionary<string, ServerSocketItem>();
             normalList = new Dictionary<string, ServerSocketItem>();
             rtrList = new List<ServerSocketItem>();
+
+            //start cleaner
+            var cache = new Thread(this.clientListCleaner);
+            cache.IsBackground = true;
+            cache.Start();
         }
 
         #region listen
@@ -59,7 +65,10 @@ namespace HermitServer {
             ConsoleAssistance.WriteLine($"[Socket] Accept {cache.EndPoint}'s connection and its Guid is {cache.Guid}.");
             ConsoleAssistance.WriteLine($"[Socket] {cache.Guid} starts to handshake...");
 
+            cache.TimeClips = 3;
             handshakeList.Add(cache.Guid, cache);
+            cache.BelongTo = ServerSocketBelongTo.Handshake;
+            OnUserCountChanged();
 
             //accept next
             s.BeginAccept(new AsyncCallback(AcceptCallback), s);
@@ -79,31 +88,119 @@ namespace HermitServer {
         Dictionary<string, ServerSocketItem> normalList;
         List<ServerSocketItem> rtrList;
 
-        private void client_StatusChanged(ServerSocketBelongTo arg1, ServerSocketBelongTo arg2, ServerSocketItem arg3) {
-            if(arg1==ServerSocketBelongTo.Handshake && arg2 == ServerSocketBelongTo.Normal) {
-                handshakeList.Remove(arg3.Guid);
-                normalList.Add(arg3.UserName, arg3);
-                return;
-            }
-            if (arg1 == ServerSocketBelongTo.Handshake && arg2 == ServerSocketBelongTo.RTR) {
-                handshakeList.Remove(arg3.Guid);
-                rtrList.Add(arg3);
-                return;
-            }
-            if (arg1 == ServerSocketBelongTo.Normal && arg2 == ServerSocketBelongTo.RTR) {
-                normalList.Remove(arg3.UserName);
-                rtrList.Add(arg3);
-                return;
-            }
-            if (arg1 == ServerSocketBelongTo.Normal && arg2 == ServerSocketBelongTo.Close) {
-                normalList.Remove(arg3.UserName);
-                return;
-            }
+        private void client_StatusChanged(ServerSocketBelongTo arg2, ServerSocketItem arg3) {
+            lock (lock_clientList) {
+                if (arg3.BelongTo == ServerSocketBelongTo.Handshake && arg2 == ServerSocketBelongTo.Normal) {
+                    handshakeList.Remove(arg3.Guid);
+                    normalList.Add(arg3.UserName, arg3);
+                    arg3.BelongTo = arg2;
+                    return;
+                }
+                if (arg3.BelongTo == ServerSocketBelongTo.Handshake && arg2 == ServerSocketBelongTo.RTR) {
+                    handshakeList.Remove(arg3.Guid);
+                    rtrList.Add(arg3);
+                    arg3.BelongTo = arg2;
+                    return;
+                }
+                if (arg3.BelongTo == ServerSocketBelongTo.Normal && arg2 == ServerSocketBelongTo.RTR) {
+                    normalList.Remove(arg3.UserName);
+                    rtrList.Add(arg3);
+                    arg3.BelongTo = arg2;
+                    return;
+                }
+                if (arg2 == ServerSocketBelongTo.Close) {
+                    switch (arg3.BelongTo) {
+                        case ServerSocketBelongTo.Handshake:
+                            normalList.Remove(arg3.Guid);
+                            break;
+                        case ServerSocketBelongTo.Normal:
+                            normalList.Remove(arg3.UserName);
+                            break;
+                        case ServerSocketBelongTo.RTR:
+                            rtrList.Remove(arg3);
+                            break;
+                        case ServerSocketBelongTo.Close:
+                            break;
+                        default:
+                            throw new ArgumentException();
+                    }
+                    arg3.BelongTo = arg2;
+                    OnUserCountChanged();
+                    return;
+                }
 
-            throw new ArgumentException();
+                //give up
+                return;
+            }
         }
 
-        
+        public (int handshakeUser, int normalUser, int rtrUser) GetUserCount() {
+            lock (lock_clientList) {
+                return (handshakeList.Count, normalList.Count, rtrList.Count);
+            }
+        }
+
+        private void OnUserCountChanged() {
+            (int a, int b, int c) = General.serverSocket.GetUserCount();
+            if (a + b + c >= int.Parse(General.serverConfig["maxUser"])) {
+                this.StopListen();
+            } else {
+                this.StartListen();
+            }
+        }
+
+        void clientListCleaner() {
+            var rnd = new HermitLib.Random();
+
+            while (true) {
+                //1min-5min
+                Thread.Sleep(rnd.Next(1 * 60 * 1000, 5 * 60 * 1000));
+
+                lock (lock_clientList) {
+                    //time clips --
+                    foreach (var item in handshakeList.Values) {
+                        item.TimeClips--;
+                    }
+                    foreach (var item in normalList.Values) {
+                        item.TimeClips--;
+                    }
+                    foreach (var item in rtrList) {
+                        item.TimeClips--;
+                    }
+
+                    //evaluate client
+                    foreach (var item in handshakeList.Values) {
+                        if(item.TimeClips < 0) {
+                            item.Close();
+                        }
+                    }
+                    foreach (var item in normalList.Values) {
+                        if (item.TimeClips < 0) {
+                            item.Close();
+                        }
+                    }
+                    foreach (var item in rtrList) {
+                        if (item.TimeClips < 0) {
+                            item.Close();
+                        }
+                    }
+                }
+            }
+        }
+
+        public void Close() {
+            lock (lock_clientList) {
+                foreach (var item in handshakeList.Values) {
+                    item.Close();
+                }
+                foreach (var item in normalList.Values) {
+                    item.Close();
+                }
+                foreach (var item in rtrList) {
+                    item.Close();
+                }
+            }
+        }
 
         #endregion
 

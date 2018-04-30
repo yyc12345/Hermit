@@ -19,7 +19,9 @@ This is original json:
     "emotionDatabasePath": "emotion.db",
 
     "ipv4Port": "8686",
-    "ipv6Port": "6161"
+    "ipv6Port": "6161",
+    
+    "maxUser": "10"
 }
 ```
 
@@ -36,3 +38,8 @@ We use sqlite to be Hermit's database. Hermit will store 4 database files and ea
 
 Tips:  
 You can use some sofeware to read it. But don't change it if you couldn't know its mean in advance. Hermit will not check data's legality when reading database. So your changing might led to some unknown issues.  
+
+## Command
+Almost command which showed in Teji Protocol can be used in server console. But some command is usless for server. If you type and run it. Hermit server will remind you that command is illagal  
+Here are usless commands for server:  
+* /pull

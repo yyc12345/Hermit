@@ -6,15 +6,15 @@ namespace HermitServer {
         static void Main(string[] args) {
 
             ConsoleAssistance.WriteLine("Welcome to use Hermit!", ConsoleColor.Yellow);
-            ConsoleAssistance.WriteLine("Generic instant-message software.");
+            ConsoleAssistance.WriteLine("Light, free and secure instant-messaging(IM) software.");
 
             //initialize
             //todo:init
-            ConsoleAssistance.WriteLine("[Main] Initializing server config...");
+            ConsoleAssistance.WriteLine("[Main] Initialize server config...");
             General.serverConfig = new ServerConfig(Information.WorkPath.Enter("config.json").Path());
-            ConsoleAssistance.WriteLine("[Main] Initializing server database...");
+            ConsoleAssistance.WriteLine("[Main] Initialize server database...");
             General.serverDatabase = new ServerDatabase();
-            ConsoleAssistance.WriteLine("[Main] Initializing server socket...");
+            ConsoleAssistance.WriteLine("[Main] Initialize server socket...");
             General.serverSocket = new ServerSocket();
             ConsoleAssistance.WriteLine("[Main] Start listening...");
             General.serverSocket.StartListen();
@@ -30,6 +30,20 @@ namespace HermitServer {
                 }
             }
 
+            //close server
+            ConsoleAssistance.WriteLine("[Main] Start closing server...");
+            //todo:finish closing
+            ConsoleAssistance.WriteLine("[Main] Close all clients...");
+            General.serverSocket.Close();
+            ConsoleAssistance.WriteLine("[Main] Stop listening...");
+            General.serverSocket.StopListen();
+            ConsoleAssistance.WriteLine("[Main] Store server database...");
+            General.serverDatabase.Close();
+            ConsoleAssistance.WriteLine("[Main] Save server config...");
+            General.serverConfig.Save();
+
+
+            ConsoleAssistance.WriteLine("Thanks for using Hermit.", ConsoleColor.Yellow);
         }
     }
 }

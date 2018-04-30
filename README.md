@@ -29,9 +29,10 @@ You can choose your suitable server type and deploy this on a server which you b
 
 Packages:  
 
-* ~~Newtonsoft.Json 10.0.3~~  
-* ~~System.ValueTuple 4.4.0~~  
-* ~~Portable.BouncyCastle 1.8.1.3~~  
+* Newtonsoft.Json 11.0.2 \(Installed in each repositories\)  
+* System.ValueTuple 4.4.0 \(Installed in each repositories\)  
+* Portable.BouncyCastle 1.8.2 \(Installed in each repositories\)  
+* Microsoft.EntityFrameworkCore.Sqlite 2.0.2 \(Installed in HermitServer\)  
 
 Language:C\# 7  
 Basic library: .Net Core 2.0\(for core lib\) or .Net framework 4.5\(for WPF project\)
@@ -88,6 +89,7 @@ This project is a implement of the abstract project "Secure IM software". This a
 * [yyc12345/Hermit](https://github.com/yyc12345/Hermit)
 * [ShadowPower/nekochat](https://github.com/ShadowPower/nekochat)
 * [jxpxxzj/boss-im](https://github.com/jxpxxzj/boss-im)
+* [jxpxxzj/ChinoIM](https://github.com/jxpxxzj/ChinoIM)
 
 ## Notification
 This project's author need be attended in The Chinese National College Entrance Examination. So the development is **stopped**. If you want to do something. Everything will be done when I finish the exam. The date about 2018/6/8. Bless for myself, and I love this project.  
